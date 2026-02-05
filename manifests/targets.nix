@@ -127,4 +127,6 @@
   _125 = "armv7a-none-eabihf";
   _126 = "armv8r-none-eabihf";
   _127 = "riscv64a23-unknown-linux-gnu";
+  _128 = "x86_64-unknown-linux-gnuasan";
+  _129 = "powerpc64-unknown-linux-musl";
 }
