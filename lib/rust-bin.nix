@@ -432,7 +432,7 @@ let
             extensions = [ ];
             targets = [ ];
             targetExtensions = [ ];
-            enableLibsecret = name != "minimal" && stdenv.hostPlatform.isLinux;
+            enableLibsecret = false;
           };
 
       profiles = mapAttrs mkProfile manifest.profiles;
