@@ -6,10 +6,10 @@
   gnutar,
   autoPatchelfHook,
   bintools,
+  lndir,
   zlib,
   gccForLibs,
   apple-sdk ? null,
-  pkgsHostHost,
   # The path to nixpkgs root.
   path,
   toRustTarget,
@@ -61,12 +61,8 @@ let
       nativeBuildInputs = [
         gnutar
       ]
-      ++
-        # Darwin doesn't use ELF, and they usually just work due to relative RPATH.
-        optional (!dontFixup && !hostPlatform.isDarwin) autoPatchelfHook
-      ++
-        # For `install_name_tool`.
-        optional (hostPlatform.isDarwin && linksToRustc) bintools;
+      # Darwin doesn't use ELF, and they usually just work due to relative RPATH.
+      ++ optional (!dontFixup && !hostPlatform.isDarwin) autoPatchelfHook;
 
       buildInputs =
         optional (elem pname [
@@ -133,13 +129,20 @@ let
         "rustc-docs"
       ];
 
-      # Darwin binaries usually just work... except for these linking to rustc from another drv.
       postFixup =
+        # Darwin binaries use relative RPATH and modifying RPATH is unreliable.
+        # See <https://github.com/oxalica/rust-overlay/issues/248>.
+        # Here we symlink the rustc library dir to make the original RPATH work.
+        # Since "$out/lib" has the same layout as "${rustc}/lib" because of
+        # symlink, it should not cause issues in `symlinkJoin` from `mkAggregated`.
         optionalString (hostPlatform.isDarwin && linksToRustc) ''
-          for f in $out/bin/*; do
-            install_name_tool -add_rpath "${self.rustc}/lib" "$f" || true
-          done
+          if [[ -d "$out/lib" ]]; then
+            ${lndir}/bin/lndir -silent "${self.rustc}/lib" "$out/lib"
+          else
+            ln -sT "${self.rustc}/lib" "$out/lib"
+          fi
         ''
+
         # Wrap the shipped `rust-lld` (lld), which is used by default on some targets.
         # Unfortunately there is no hook to conveniently wrap CC tools inside
         # derivation and `wrapBintools` is designed for wrapping a standalone
